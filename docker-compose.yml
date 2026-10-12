@@ -1,0 +1,88 @@
+name: mld-hw2
+
+services:
+  kafka:
+    image: apache/kafka:4.1.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    mem_limit: 1g
+    healthcheck:
+      test: [CMD, /opt/kafka/bin/kafka-topics.sh, --bootstrap-server, kafka:9092, --list]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+
+  kafka-init:
+    image: apache/kafka:4.1.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: [/opt/kafka/bin/kafka-topics.sh]
+    command: [--bootstrap-server, kafka:9092, --create, --if-not-exists, --topic, transactions, --partitions, "1", --replication-factor, "1"]
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.8@sha256:0152dd511befe6a2c2ef53e930726179669b08116da78500b37c51c96ff5ee77
+    environment:
+      CLICKHOUSE_DB: fraud
+      CLICKHOUSE_USER: student
+      CLICKHOUSE_PASSWORD: homework
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8123:8123"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./sql/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./config/clickhouse.xml:/etc/clickhouse-server/config.d/project.xml:ro
+      - ./config/users.xml:/etc/clickhouse-server/users.d/project.xml:ro
+    mem_limit: 3g
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: [CMD, clickhouse-client, --user, student, --password, homework, --query, "SELECT 1 FROM fraud.transactions LIMIT 0"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  loader:
+    build: .
+    profiles: [tools]
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: transactions
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: student
+      CLICKHOUSE_PASSWORD: homework
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data:ro
+      - ./results:/app/results
+    mem_limit: 512m
+    command: [python, scripts/load_csv.py, data/train.csv]
+
+volumes:
+  kafka_data:
+  clickhouse_data:

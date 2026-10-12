@@ -1,0 +1,6 @@
+data/
+results/
+.git/
+.DS_Store
+__pycache__/
+*.md
