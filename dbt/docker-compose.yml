@@ -1,0 +1,27 @@
+# Локальный ClickHouse с сохранением данных между запусками контейнера.
+name: mld-hw4
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.8
+    environment:
+      CLICKHOUSE_DB: transactions_db
+      CLICKHOUSE_USER: student
+      CLICKHOUSE_PASSWORD: homework
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: '1'
+    ports:
+      - '127.0.0.1:8123:8123'
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: [CMD, clickhouse-client, --user, student, --password, homework, --query, 'SELECT 1']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+volumes:
+  clickhouse_data:

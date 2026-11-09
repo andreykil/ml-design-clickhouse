@@ -1,0 +1,13 @@
+# Описание справочника штатов и проверки его ключа и названий.
+version: 2
+
+seeds:
+  - name: states
+    description: Справочник 50 штатов США и округа Колумбия, который также есть в датасете.
+    columns:
+      - name: state_code
+        description: Двухбуквенный код штата или DC.
+        tests: [not_null, unique]
+      - name: state_name
+        description: Полное название штата или округа.
+        tests: [not_null]

@@ -1,0 +1,4 @@
+# Python-зависимости для запуска dbt и загрузчика транзакций.
+dbt-core==1.10.21
+dbt-clickhouse==1.9.8
+clickhouse-connect==1.12.0

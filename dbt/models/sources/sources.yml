@@ -1,0 +1,56 @@
+# Исходная таблица ClickHouse, её колонки и базовые проверки данных.
+version: 2
+
+sources:
+  - name: transactions_db
+    schema: transactions_db
+    description: Исходные транзакции из train.csv домашнего задания по ClickHouse.
+    tables:
+      - name: transactions
+        description: Одна строка — одна транзакция с известной меткой мошенничества.
+        columns:
+          - name: transaction_id
+            description: Номер строки CSV, добавленный при загрузке.
+            tests: [not_null, unique]
+          - name: transaction_time
+            description: Время операции. В CSV нет часового пояса; для проекта принято UTC.
+          - name: merch
+            description: Название мерчанта.
+          - name: cat_id
+            description: Категория покупки, 14 значений.
+          - name: amount
+            description: Сумма покупки в денежных единицах датасета.
+          - name: name_1
+            description: Имя клиента.
+          - name: name_2
+            description: Фамилия клиента.
+          - name: gender
+            description: Пол клиента, M или F.
+          - name: street
+            description: Адрес клиента, используется в составном ключе.
+          - name: one_city
+            description: Город клиента.
+          - name: us_state
+            description: Код штата или округа Колумбия.
+          - name: post_code
+            description: Почтовый индекс клиента.
+          - name: lat
+            description: Широта клиента.
+          - name: lon
+            description: Долгота клиента.
+          - name: population_city
+            description: Численность населения города клиента.
+          - name: jobs
+            description: Профессия клиента.
+          - name: merchant_lat
+            description: Широта мерчанта.
+          - name: merchant_lon
+            description: Долгота мерчанта.
+          - name: target
+            description: Метка мошенничества, 1 — фрод, 0 — обычная операция.
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [0, 1]
+                    quote: false
