@@ -1,0 +1,32 @@
+# Настройки dbt-проекта: пути, способы создания моделей и пороги для расчётов.
+name: fraud_analytics
+version: '1.0.0'
+config-version: 2
+profile: fraud_analytics
+
+model-paths: [models]
+macro-paths: [macros]
+seed-paths: [seeds]
+test-paths: [tests]
+clean-targets: [target, dbt_packages]
+
+models:
+  fraud_analytics:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table
+      +engine: MergeTree()
+      +order_by: tuple()
+
+vars:
+  large_amount_threshold: 1000
+  high_risk_fraud_rate: 1
+  'dbt_date:time_zone': UTC
+
+dispatch:
+  - macro_namespace: dbt_date
+    search_order: [fraud_analytics, dbt_date]
+
+flags:
+  send_anonymous_usage_stats: false

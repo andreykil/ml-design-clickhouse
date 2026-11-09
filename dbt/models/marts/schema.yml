@@ -1,0 +1,110 @@
+# Описания витрин и колонок, проверки ключей и допустимых значений.
+version: 2
+
+models:
+  - name: mart_daily_state_metrics
+    description: Оборот и распределение сумм по датам и штатам. Одна строка на дату и штат.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [transaction_date, state_code]
+    columns:
+      - name: transaction_date
+        description: Дата операций.
+        tests: [not_null]
+      - name: state_code
+        description: Код штата или DC.
+        tests: [not_null]
+      - name: transaction_count
+        description: Число транзакций за день в штате.
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+      - name: total_amount
+        description: Общая сумма транзакций.
+      - name: avg_amount
+        description: Средний чек.
+      - name: p95_amount
+        description: Точный 95-й перцентиль суммы транзакции.
+      - name: large_transaction_share
+        description: Доля транзакций с суммой от порога крупной покупки, в процентах от 0 до 100.
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+  - name: mart_fraud_by_category
+    description: Количество и суммы мошеннических операций по категориям покупок.
+    columns:
+      - name: category
+        description: Категория покупки, ключ витрины.
+        tests: [not_null, unique]
+      - name: transaction_count
+        description: Общее число операций в категории.
+      - name: fraud_count
+        description: Число мошеннических операций.
+      - name: fraud_rate
+        description: Процент мошеннических операций от общего числа.
+        tests: [not_null]
+      - name: total_amount
+        description: Общая сумма операций в категории.
+      - name: fraud_amount
+        description: Сумма мошеннических операций.
+
+  - name: mart_fraud_by_state
+    description: География фрода с количеством уникальных клиентов и мерчантов. Одна строка на штат или DC.
+    columns:
+      - name: state_code
+        description: Код штата или DC, ключ витрины.
+        tests: [not_null, unique]
+      - name: state_name
+        description: Название из справочника states.
+        tests: [not_null]
+      - name: transaction_count
+        description: Общее число операций в штате.
+      - name: fraud_count
+        description: Число мошеннических операций.
+      - name: fraud_rate
+        description: Процент мошеннических операций от общего числа.
+        tests: [not_null]
+      - name: customer_count
+        description: Число уникальных составных ключей клиентов.
+      - name: merchant_count
+        description: Число уникальных мерчантов.
+      - name: total_amount
+        description: Общая сумма операций в штате.
+      - name: fraud_amount
+        description: Сумма мошеннических операций в штате.
+
+  - name: mart_customer_risk_profile
+    description: Профиль клиента по всей доступной истории, с учебной сегментацией риска.
+    columns:
+      - name: customer_id
+        description: Приближённый ключ клиента, ключ витрины.
+        tests: [not_null, unique]
+      - name: first_transaction_time
+        description: Первая операция клиента в датасете.
+      - name: last_transaction_time
+        description: Последняя операция клиента в датасете.
+      - name: transaction_count
+        description: Общее число операций клиента.
+      - name: fraud_count
+        description: Число мошеннических операций клиента.
+      - name: fraud_rate
+        description: Процент мошеннических операций в истории клиента.
+        tests: [not_null]
+      - name: total_amount
+        description: Общая сумма операций клиента.
+      - name: fraud_amount
+        description: Сумма мошеннических операций клиента.
+      - name: avg_amount
+        description: Средний чек клиента.
+      - name: risk_level
+        description: HIGH — fraud_rate от 1% по умолчанию, MEDIUM — есть фрод ниже порога, LOW — фрода нет. Порог HIGH задаётся переменной high_risk_fraud_rate.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [HIGH, MEDIUM, LOW]
